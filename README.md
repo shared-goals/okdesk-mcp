@@ -59,6 +59,24 @@ OKDESK_API_TOKEN=<token>
 2. **v1** — write (создать заявку, комментарий) с approval.
 3. **v2** — SQL API для аналитики (опционально).
 
+## План пилота
+
+Дев-чекаут: локально, вне `~/.hermes` (например `~/Projects/okdesk-mcp` или любой рабочий каталог).
+
+1. Unit-тесты с замоканным `httpx` для v0-инструментов (TDD, см. контракт выше).
+2. Локальная регистрация в Hermes для интеграционной проверки:
+   ```bash
+   hermes mcp add okdesk --command uv --args run --project <path-to-okdesk-mcp> okdesk-mcp \
+     --env OKDESK_DOMAIN=https://<account>.okdesk.ru OKDESK_API_TOKEN=<token>
+   hermes mcp test okdesk
+   ```
+   `OKDESK_API_TOKEN` создаётся вручную в Okdesk (Настройки → API, требует роль Администратор)
+   и хранится только в `~/.hermes/.env` — не коммитится, не уходит в память агента.
+3. Скилл-потребитель — `okdesk` в [`shared-goals/teamscore-hermes`](https://github.com/shared-goals/teamscore-hermes)
+   (приватный репозиторий), пилотируется в инстансе Hermes одного из руководителей TeamScore,
+   затем переезжает на общую инфраструктуру TeamScore вместе с самим сервером (те же тулы,
+   свои учётные данные на стороне TeamScore).
+
 ## Лицензия
 
 MIT
