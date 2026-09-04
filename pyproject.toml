@@ -1,0 +1,25 @@
+[project]
+name = "okdesk-mcp"
+version = "0.1.0"
+description = "Read-only Okdesk REST API tools for MCP"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28,<1",
+    "mcp>=1.12,<2",
+]
+
+[project.scripts]
+okdesk-mcp = "okdesk_mcp.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+    "ruff>=0.12,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"

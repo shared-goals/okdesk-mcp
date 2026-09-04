@@ -28,13 +28,22 @@ SQL API — отдельным слоем при необходимости гл
 
 | Tool | Назначение |
 |---|---|
-| `list_issues` | заявки с фильтрами: статус, приоритет, период |
+| `list_issues` | заявки с фильтрами: код приоритета, дата создания, дата изменения, состояние «без ответа» |
+| `list_issue_priorities` | коды и определения приоритетов заявок |
+| `list_issue_statuses` | статусы заявок и признак финального статуса |
+| `list_issue_comments` | история комментариев заявки с автором и датой публикации |
 | `get_issue` | карточка заявки по id |
-| `critical_issues_since` | критические заявки за N часов |
-| `unanswered_issues` | заявки без ответа более N дней |
 | `issue_url` | прямая ссылка на заявку в service desk |
 
 Write-операции (`create_issue`, `add_comment`) — отдельным этапом, с human-in-the-loop.
+Сценарии «критические за 24 часа» и «без ответа более 48 часов» собираются
+вызывающим Hermes-скиллом из `list_issues`, а не реализуются как отдельные MCP-инструменты.
+
+`list_issues` возвращает **одну страницу** (по умолчанию 50 записей, максимум Okdesk).
+Инструмент никогда не собирает историю целиком внутри себя — это защита от случайной
+выгрузки тысяч заявок в контекст модели за один вызов. Вызывающая сторона (скилл) явно
+запрашивает `page`/`page_size` и всегда сначала сужает выборку фильтрами
+(`priority_codes`, `status_codes`, `created_since`, `without_answer`).
 
 ## Конфигурация
 
@@ -43,11 +52,33 @@ OKDESK_DOMAIN=https://<account>.okdesk.ru
 OKDESK_API_TOKEN=<token>
 ```
 
+Запросы к Okdesk всегда выполняются напрямую и не используют переменные proxy из окружения.
+
+Для локальной отладки создайте `.env` из `.env.example`. Команда `make debug` загружает
+только этот файл и использует следующие параметры отчёта:
+
+```bash
+CRITICAL_HOURS=24
+UNANSWERED_HOURS=48
+PAGE_SIZE=50
+```
+
+После изменения `.env` достаточно снова выполнить `make debug`; перезапуск Hermes не нужен.
+`UNANSWERED_HOURS` показывает целевой возраст для строгой проверки в скилле: API
+Okdesk возвращает только кандидатов по `without_answer`, поэтому сам debug-скрипт не
+выдаёт его за окончательный фильтр.
+
+В runtime MCP-сервера локальный `.env` не загружается. Hermes передаёт серверу
+`OKDESK_DOMAIN` и `OKDESK_API_TOKEN` из `~/.hermes/.env` через конфигурацию MCP.
+
 ## Спецификация (TDD-контракт)
 
 Каждый инструмент покрывается unit-тестом с замоканным `httpx`-клиентом. Контракт:
 
-- `list_issues(status=None, priority=None, since=None) -> list[Issue]`
+- `list_issues(status_codes=None, priority_codes=None, created_since=None, updated_until=None, without_answer=None, page=1, page_size=50) -> list[Issue]` (одна страница; `page_size` не может превышать 50)
+- `list_issue_priorities() -> list[Priority]`
+- `list_issue_statuses() -> list[Status]`
+- `list_issue_comments(issue_id: int) -> list[Comment]`
 - `get_issue(id: int) -> Issue`
 - ошибки API → типизированные исключения (`OkdeskError`), не сырой текст.
 
