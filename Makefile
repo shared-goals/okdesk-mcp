@@ -2,7 +2,7 @@
 
 ENV_FILE ?= .env
 
-.PHONY: help hep install run test format debug
+.PHONY: help hep install run test format debug debug-schema
 
 help: ## Show available development targets.
 
@@ -26,4 +26,7 @@ format: ## Fix lint issues and format the project with Ruff.
 
 debug: ## Print live report counts directly via OkdeskClient (bypasses MCP/Hermes).
 	@test -f "$(ENV_FILE)" || { echo "Env file not found: $(ENV_FILE) (copy .env.example to .env)" >&2; exit 1; }
-	@set -a; . "$(ENV_FILE)"; set +a; uv run python scripts/debug_report.py
+	@set -a; . "$(ENV_FILE)"; set +a; uv run python scripts/debug_report.py $(DEBUG_ARGS)
+
+debug-schema: ## Print live report counts and the merged issue schema.
+	$(MAKE) debug DEBUG_ARGS=--schema

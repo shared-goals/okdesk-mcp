@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28,<1",
     "mcp>=1.12,<2",
+    "rich>=14,<15",
 ]
 
 [project.scripts]
