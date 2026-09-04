@@ -11,6 +11,7 @@ dependencies = [
 
 [project.scripts]
 okdesk-mcp = "okdesk_mcp.server:main"
+okdesk-mcp-report = "okdesk_mcp.report_cli:main"
 
 [dependency-groups]
 dev = [

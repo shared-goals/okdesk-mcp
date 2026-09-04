@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Manual, direct sanity check for the two Okdesk reports — bypasses MCP/Hermes.
 
-Talks straight to okdesk_mcp.client.OkdeskClient so you can verify the API
-contract and filter behavior without going through the agent, the skill, or
-a live MCP stdio session. Prints counts first, never dumps full ticket bodies.
+Talks straight to okdesk_mcp.client.OkdeskClient (via okdesk_mcp.reports, the
+same shared logic behind the `okdesk-mcp-report` CLI) so you can verify the
+API contract and filter behavior without going through the agent, the skill,
+or a live MCP stdio session. Prints counts first, never dumps full ticket
+bodies.
 
 Usage:
     OKDESK_DOMAIN=... OKDESK_API_TOKEN=... uv run python scripts/debug_report.py
@@ -16,7 +18,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from rich.console import Console
@@ -27,41 +29,17 @@ sys.path.insert(
 )
 
 from okdesk_mcp.client import OkdeskClient
+from okdesk_mcp.reports import (
+    fetch_critical_tickets,
+    fetch_strict_unanswered_tickets,
+    resolve_active_status_codes,
+)
 
-_OKDESK_TIMESTAMP_FORMAT = "%d-%m-%Y %H:%M"
 _DEFAULT_CRITICAL_HOURS = 24
 _DEFAULT_UNANSWERED_HOURS = 48
 _DEFAULT_PAGE_SIZE = 50
 _DEFAULT_COMPANY_CATEGORY_ID = "13"
 _console = Console()
-
-
-def _cutoff(hours: int) -> str:
-    return (datetime.now(UTC) - timedelta(hours=hours)).strftime(
-        _OKDESK_TIMESTAMP_FORMAT
-    )
-
-
-def _parse_timestamp(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
-
-
-def _is_strict_unanswered(
-    issue: dict[str, Any], comments: list[dict[str, Any]], cutoff: datetime
-) -> bool:
-    if comments:
-        latest = max(comments, key=lambda comment: comment["published_at"])
-        author = latest.get("author") or {}
-        timestamp = latest.get("published_at")
-    else:
-        author = issue.get("author") or {}
-        timestamp = issue.get("created_at")
-
-    return (
-        author.get("type") == "contact"
-        and isinstance(timestamp, str)
-        and _parse_timestamp(timestamp) < cutoff
-    )
 
 
 def _elapsed(start: float) -> float:
@@ -166,6 +144,7 @@ def main() -> None:
     ).strip()
     if not company_category_id:
         raise ValueError("COMPANY_CATEGORY_ID must not be empty")
+    now = datetime.now(UTC)
 
     _console.print(
         f"parameters: critical_hours={critical_hours}, "
@@ -174,10 +153,11 @@ def main() -> None:
     )
     _console.rule(f"[bold]Critical tickets (last {critical_hours}h), page 1[/bold]")
     started = time.perf_counter()
-    critical = client.list_issues(
-        priority_codes=["Critical"],
+    critical = fetch_critical_tickets(
+        client,
+        now=now,
+        hours=critical_hours,
         company_category_ids=[company_category_id],
-        created_since=_cutoff(critical_hours),
         page_size=page_size,
     )
     _console.print(
@@ -189,41 +169,34 @@ def main() -> None:
 
     _console.rule("[bold]Active statuses[/bold]")
     started = time.perf_counter()
-    statuses = client.list_issue_statuses()
-    active_codes = [s["code"] for s in statuses if not s.get("final", False)]
+    active_codes = resolve_active_status_codes(client)
     _console.print(
-        f"active status codes: {len(active_codes)} of {len(statuses)} total; "
+        f"active status codes: {len(active_codes)}; "
         f"request time: {_elapsed(started):.3f}s"
     )
 
     _console.rule(
         f"[bold]Unanswered candidates (active + without_answer, "
-        f"strict age target {unanswered_hours}h), page 1[/bold]"
+        f"strict age target {unanswered_hours}h)[/bold]"
     )
     started = time.perf_counter()
-    candidates = client.list_issues(
-        status_codes=active_codes,
+    result = fetch_strict_unanswered_tickets(
+        client,
+        now=now,
+        hours=unanswered_hours,
         company_category_ids=[company_category_id],
-        without_answer=True,
+        active_status_codes=active_codes,
         page_size=page_size,
     )
-    unanswered_cutoff = datetime.now(UTC) - timedelta(hours=unanswered_hours)
-    strict_unanswered: list[dict[str, Any]] = []
-    for issue in candidates:
-        issue_id = issue.get("id")
-        if isinstance(issue_id, int) and _is_strict_unanswered(
-            issue, client.list_issue_comments(issue_id), unanswered_cutoff
-        ):
-            strict_unanswered.append(issue)
     _console.print(
-        f"candidate count on page 1: {len(candidates)}; "
-        f"strict unanswered count: {len(strict_unanswered)} "
-        f"(page_size={page_size}; more candidates may exist if this is {page_size})"
+        f"strict unanswered count: {len(result.issues)} "
+        f"(pages fetched: {result.pages_fetched}; "
+        f"truncated: {result.truncated})"
     )
     _console.print(f"request time: {_elapsed(started):.3f}s", style="yellow")
-    _print_entries(domain, strict_unanswered)
+    _print_entries(domain, result.issues)
     if args.schema:
-        _print_schema("issue entry", [*critical, *strict_unanswered])
+        _print_schema("issue entry", [*critical, *result.issues])
 
 
 if __name__ == "__main__":
