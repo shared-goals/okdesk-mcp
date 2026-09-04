@@ -25,6 +25,7 @@ class OkdeskClient:
         *,
         status_codes: Sequence[str] | None = None,
         priority_codes: Sequence[str] | None = None,
+        company_category_ids: Sequence[str] | None = None,
         created_since: str | None = None,
         updated_until: str | None = None,
         without_answer: bool | None = None,
@@ -39,6 +40,11 @@ class OkdeskClient:
             params.extend(("status_codes[]", code) for code in status_codes)
         if priority_codes is not None:
             params.extend(("priority_codes[]", code) for code in priority_codes)
+        if company_category_ids is not None:
+            params.extend(
+                ("company_category_ids[]", category_id)
+                for category_id in company_category_ids
+            )
         if created_since is not None:
             params.append(("created_since", created_since))
         if updated_until is not None:

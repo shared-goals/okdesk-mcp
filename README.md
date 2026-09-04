@@ -61,6 +61,7 @@ OKDESK_API_TOKEN=<token>
 CRITICAL_HOURS=24
 UNANSWERED_HOURS=48
 PAGE_SIZE=50
+COMPANY_CATEGORY_ID=13
 ```
 
 После изменения `.env` достаточно снова выполнить `make debug`; перезапуск Hermes не нужен.
@@ -68,7 +69,7 @@ PAGE_SIZE=50
 Okdesk возвращает только кандидатов по `without_answer`, поэтому сам debug-скрипт не
 выдаёт его за окончательный фильтр.
 
-Каждый debug-запуск показывает для первых пяти заявок номер, компанию, контакт,
+Каждый debug-запуск показывает для всех заявок текущей страницы номер, компанию, контакт,
 заголовок и время запроса. Полные ссылки печатаются отдельным списком в формате
 `#TICKETID: URL`. При необходимости полный inventory доступных полей страниц
 можно запросить один раз аргументом `--schema`:
@@ -88,7 +89,7 @@ make debug DEBUG_ARGS=--schema
 
 Каждый инструмент покрывается unit-тестом с замоканным `httpx`-клиентом. Контракт:
 
-- `list_issues(status_codes=None, priority_codes=None, created_since=None, updated_until=None, without_answer=None, page=1, page_size=50) -> list[Issue]` (одна страница; `page_size` не может превышать 50)
+- `list_issues(status_codes=None, priority_codes=None, company_category_ids=None, created_since=None, updated_until=None, without_answer=None, page=1, page_size=50) -> list[Issue]` (одна страница; `page_size` не может превышать 50)
 - `list_issue_priorities() -> list[Priority]`
 - `list_issue_statuses() -> list[Status]`
 - `list_issue_comments(issue_id: int) -> list[Comment]`

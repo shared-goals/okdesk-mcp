@@ -26,6 +26,7 @@ def test_list_issues_forwards_documented_filters(
             assert kwargs == {
                 "status_codes": None,
                 "priority_codes": ["Critical"],
+                "company_category_ids": ["13"],
                 "created_since": "2026-09-01 00:00",
                 "updated_until": "2026-09-02 00:00",
                 "without_answer": True,
@@ -38,6 +39,7 @@ def test_list_issues_forwards_documented_filters(
 
     assert server.list_issues(
         priority_codes=["Critical"],
+        company_category_ids=["13"],
         created_since="2026-09-01 00:00",
         updated_until="2026-09-02 00:00",
         without_answer=True,

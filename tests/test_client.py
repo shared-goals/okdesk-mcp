@@ -10,6 +10,7 @@ def test_list_issues_forwards_documented_filters_and_returns_issues() -> None:
         assert list(request.url.params.multi_items()) == [
             ("api_token", "test-token"),
             ("priority_codes[]", "Critical"),
+            ("company_category_ids[]", "13"),
             ("created_since", "2026-09-01 00:00"),
             ("updated_until", "2026-09-01 00:00"),
             ("without_answer", "true"),
@@ -24,6 +25,7 @@ def test_list_issues_forwards_documented_filters_and_returns_issues() -> None:
 
     assert client.list_issues(
         priority_codes=["Critical"],
+        company_category_ids=["13"],
         created_since="2026-09-01 00:00",
         updated_until="2026-09-01 00:00",
         without_answer=True,
@@ -185,7 +187,9 @@ def test_unanswered_candidates_report_scenario() -> None:
     )
 
     assert client.list_issues(
-        status_codes=["opened", "inprogress"], without_answer=True
+        status_codes=["opened", "inprogress"],
+        company_category_ids=["13"],
+        without_answer=True,
     ) == [{"id": 7, "without_answer": True}]
 
 

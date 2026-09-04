@@ -22,6 +22,7 @@ def _client() -> OkdeskClient:
 def list_issues(
     status_codes: list[str] | None = None,
     priority_codes: list[str] | None = None,
+    company_category_ids: list[str] | None = None,
     created_since: str | None = None,
     updated_until: str | None = None,
     without_answer: bool | None = None,
@@ -29,12 +30,13 @@ def list_issues(
     page_size: int = 50,
 ) -> list[dict[str, Any]]:
     """Return ONE page (default 50, max 50) of issues filtered by status, priority,
-    creation date, update date, and reply state. Always narrow with filters first;
+    company category, creation date, update date, and reply state. Always narrow with filters first;
     only request additional pages (page=2, 3, ...) if the result is exactly page_size
     long, meaning more may exist. Never fetch unfiltered history in a loop."""
     return _client().list_issues(
         status_codes=status_codes,
         priority_codes=priority_codes,
+        company_category_ids=company_category_ids,
         created_since=created_since,
         updated_until=updated_until,
         without_answer=without_answer,
