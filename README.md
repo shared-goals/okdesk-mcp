@@ -69,6 +69,17 @@ COMPANY_CATEGORY_ID=13
 Okdesk возвращает только кандидатов по `without_answer`, поэтому сам debug-скрипт не
 выдаёт его за окончательный фильтр.
 
+Для машинно-читаемого результата используйте тот же проверенный код через Make:
+
+```bash
+make report REPORT=critical
+make report REPORT=unanswered
+make report REPORT=critical REPORT_ARGS="--hours 300"
+```
+
+Команда выводит JSON. Скилл использует dedicated wrapper `scripts/report.sh`, а не Make,
+потому что Make не должен быть runtime-зависимостью автоматизированного запуска.
+
 Каждый debug-запуск показывает для всех заявок текущей страницы номер, компанию, контакт,
 заголовок и время запроса. Полные ссылки печатаются отдельным списком в формате
 `#TICKETID: URL`. При необходимости полный inventory доступных полей страниц
